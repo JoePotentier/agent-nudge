@@ -91,6 +91,11 @@ If using with Claude Code:
 ```json
 {
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [{"type": "command", "command": "/path/to/agent-nudge/hooks/start-work.sh"}]
+      }
+    ],
     "PreToolUse": [
       {
         "hooks": [{"type": "command", "command": "/path/to/agent-nudge/hooks/start-work.sh"}]
@@ -236,6 +241,11 @@ For Windows users, use the `.bat` hook files instead of `.sh`:
 ```json
 {
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [{"type": "command", "command": "C:\\path\\to\\agent-nudge\\hooks\\start-work.bat"}]
+      }
+    ],
     "PreToolUse": [
       {
         "hooks": [{"type": "command", "command": "C:\\path\\to\\agent-nudge\\hooks\\start-work.bat"}]

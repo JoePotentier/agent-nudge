@@ -65,6 +65,9 @@ NEW_SETTINGS=$(echo "$CURRENT_SETTINGS" | jq --arg start "$START_HOOK" --arg sto
   # Initialize UserPromptSubmit array if it does not exist (fires when user submits prompt)
   .hooks.UserPromptSubmit //= [] |
 
+  # Initialize PreToolUse array if it does not exist (fires before each tool use)
+  .hooks.PreToolUse //= [] |
+
   # Initialize Stop array if it does not exist
   .hooks.Stop //= [] |
 
@@ -78,6 +81,12 @@ NEW_SETTINGS=$(echo "$CURRENT_SETTINGS" | jq --arg start "$START_HOOK" --arg sto
   (if (.hooks.UserPromptSubmit | map(.hooks // [] | map(.command) | .[]) | index($start))
    then .
    else .hooks.UserPromptSubmit += [{"hooks": [{"type": "command", "command": $start}]}]
+   end) |
+
+  # Check if start hook already exists in PreToolUse
+  (if (.hooks.PreToolUse | map(.hooks // [] | map(.command) | .[]) | index($start))
+   then .
+   else .hooks.PreToolUse += [{"hooks": [{"type": "command", "command": $start}]}]
    end) |
 
   # Check if stop hook already exists (search in nested hooks arrays)
@@ -111,6 +120,7 @@ echo ""
 echo "Hooks installed successfully!"
 echo ""
 echo "Added to UserPromptSubmit: $START_HOOK"
+echo "Added to PreToolUse:       $START_HOOK"
 echo "Added to Stop:             $STOP_HOOK"
 echo "Added to Notification:     $STOP_HOOK"
 echo "Added to SessionEnd:       $EXIT_HOOK"
