@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Refocus</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <header class="header">
+      <h1 class="title">Refocus</h1>
+      <div class="status-badge" id="status-badge">
+        <span class="status-dot"></span>
+        <span class="status-text" id="status-text">Checking...</span>
+      </div>
+    </header>
+
+    <section class="section">
+      <div class="toggle-row">
+        <span class="toggle-label">Extension Enabled</span>
+        <label class="toggle">
+          <input type="checkbox" id="enabled-toggle" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">Notification Settings</h2>
+      <div class="setting-row">
+        <label class="setting-label" for="auto-dismiss">Auto-dismiss after</label>
+        <div class="setting-input">
+          <input type="number" id="auto-dismiss" min="0" max="60" value="5" class="number-input">
+          <span class="setting-suffix">seconds</span>
+        </div>
+      </div>
+      <p class="setting-hint">Set to 0 to disable auto-dismiss</p>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">Quick Actions</h2>
+      <div class="button-group">
+        <button class="btn btn-secondary" id="dismiss-5">Dismiss 5 min</button>
+        <button class="btn btn-secondary" id="dismiss-15">Dismiss 15 min</button>
+        <button class="btn btn-secondary" id="dismiss-30">Dismiss 30 min</button>
+      </div>
+      <button class="btn btn-outline" id="clear-dismiss" style="display: none;">Clear Dismissal</button>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">Server Status</h2>
+      <div class="server-status" id="server-status">
+        <span class="server-dot"></span>
+        <span class="server-text">Checking connection...</span>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">Watched Sites</h2>
+      <ul class="sites-list" id="sites-list">
+        <li>youtube.com</li>
+        <li>twitter.com / x.com</li>
+        <li>reddit.com</li>
+        <li>facebook.com</li>
+        <li>instagram.com</li>
+        <li>tiktok.com</li>
+        <li>twitch.tv</li>
+      </ul>
+    </section>
+
+    <footer class="footer">
+      <p class="footer-text">Stay focused while Claude works!</p>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

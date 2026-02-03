@@ -1,0 +1,21 @@
+{
+  "name": "refocus",
+  "version": "1.0.0",
+  "description": "Chrome extension that displays an overlay on distracting sites when Claude needs your attention",
+  "private": true,
+  "workspaces": [
+    "server"
+  ],
+  "scripts": {
+    "start": "npm start --prefix server",
+    "server": "npm start --prefix server"
+  },
+  "keywords": [
+    "chrome-extension",
+    "productivity",
+    "claude",
+    "focus"
+  ],
+  "author": "",
+  "license": "MIT"
+}

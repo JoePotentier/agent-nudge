@@ -1,0 +1,24 @@
+{
+  "name": "refocus-server",
+  "version": "1.0.0",
+  "description": "Local status server for Refocus Chrome extension",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "start:bg": "nohup node server.js > refocus.log 2>&1 & echo $! > refocus.pid && echo 'Server started in background (PID: '$(cat refocus.pid)')'",
+    "stop": "if [ -f refocus.pid ]; then kill $(cat refocus.pid) 2>/dev/null && rm refocus.pid && echo 'Server stopped'; else echo 'No server running'; fi",
+    "status": "if [ -f refocus.pid ] && kill -0 $(cat refocus.pid) 2>/dev/null; then echo 'Server running (PID: '$(cat refocus.pid)')'; else echo 'Server not running'; fi",
+    "logs": "tail -f refocus.log"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  },
+  "keywords": [
+    "refocus",
+    "claude",
+    "productivity"
+  ],
+  "author": "",
+  "license": "MIT"
+}
