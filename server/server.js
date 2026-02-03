@@ -2,14 +2,14 @@ const express = require('express');
 const cors = require('cors');
 
 const app = express();
-const PORT = 9999;
+const PORT = parseInt(process.env.AGENT_NUDGE_PORT, 10) || 9999;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
 // State - track multiple instances
-const instances = new Map(); // instanceId -> { isActive, lastActivity, name }
+const instances = new Map(); // instanceId -> { isActive, lastActivity, name, source }
 const TIMEOUT_MS = 300000; // 5 minutes timeout
 
 // Check for timeouts across all instances
@@ -45,8 +45,8 @@ function getAggregatedStatus() {
     activeCount,
     needsAttentionCount,
     totalCount,
-    // All instances need attention (or no instances registered)
-    allNeedAttention: totalCount === 0 || activeCount === 0,
+    // All instances need attention (only if there are instances registered)
+    allNeedAttention: totalCount > 0 && activeCount === 0,
     // At least one instance needs attention
     someNeedAttention: needsAttentionCount > 0
   };
@@ -61,44 +61,49 @@ app.get('/api/status', (req, res) => {
   });
 });
 
-// POST /api/start - Signal Claude instance started working
+// POST /api/start - Signal agent instance started working
 app.post('/api/start', (req, res) => {
-  const { instanceId = 'default', name } = req.body;
+  const { instanceId = 'default', name, source = 'unknown' } = req.body;
 
   instances.set(instanceId, {
     isActive: true,
     lastActivity: Date.now(),
-    name: name || instanceId
+    name: name || instanceId,
+    source
   });
 
-  console.log(`[${new Date().toISOString()}] Instance "${instanceId}" started working`);
+  console.log(`[${new Date().toISOString()}] Instance "${instanceId}" (${source}) started working`);
   res.json({
     success: true,
     instanceId,
+    source,
     ...getAggregatedStatus()
   });
 });
 
-// POST /api/stop - Signal Claude instance stopped/waiting
+// POST /api/stop - Signal agent instance stopped/waiting
 app.post('/api/stop', (req, res) => {
-  const { instanceId = 'default' } = req.body;
+  const { instanceId = 'default', source = 'unknown' } = req.body;
 
   if (instances.has(instanceId)) {
     const instance = instances.get(instanceId);
     instance.isActive = false;
     instance.lastActivity = Date.now();
+    if (source !== 'unknown') instance.source = source;
   } else {
     instances.set(instanceId, {
       isActive: false,
       lastActivity: Date.now(),
-      name: instanceId
+      name: instanceId,
+      source
     });
   }
 
-  console.log(`[${new Date().toISOString()}] Instance "${instanceId}" stopped - needs attention`);
+  console.log(`[${new Date().toISOString()}] Instance "${instanceId}" (${source}) stopped - needs attention`);
   res.json({
     success: true,
     instanceId,
+    source,
     ...getAggregatedStatus()
   });
 });
@@ -165,25 +170,26 @@ app.get('/health', (req, res) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`
-  ┌─────────────────────────────────────────────┐
-  │         Refocus Status Server               │
-  ├─────────────────────────────────────────────┤
-  │  Running on http://localhost:${PORT}           │
-  │                                             │
-  │  Endpoints:                                 │
-  │    GET  /api/status        - Get status     │
-  │    POST /api/start         - Claude working │
-  │         body: { instanceId, name }          │
-  │    POST /api/stop          - Claude stopped │
-  │         body: { instanceId }                │
-  │    POST /api/heartbeat     - Keep alive     │
-  │         body: { instanceId }                │
-  │    POST /api/unregister    - Remove inst    │
-  │         body: { instanceId }                │
-  │    DELETE /api/instance/:id - Remove inst   │
-  │    GET  /health            - Health check   │
-  │                                             │
-  │  Timeout: ${TIMEOUT_MS / 1000} seconds                      │
-  └─────────────────────────────────────────────┘
+  ┌─────────────────────────────────────────────────┐
+  │         Agent Nudge Status Server               │
+  ├─────────────────────────────────────────────────┤
+  │  Running on http://localhost:${String(PORT).padEnd(5)}              │
+  │                                                 │
+  │  Endpoints:                                     │
+  │    GET  /api/status        - Get status         │
+  │    POST /api/start         - Agent working      │
+  │         body: { instanceId, name, source }      │
+  │    POST /api/stop          - Agent stopped      │
+  │         body: { instanceId, source }            │
+  │    POST /api/heartbeat     - Keep alive         │
+  │         body: { instanceId }                    │
+  │    POST /api/unregister    - Remove instance    │
+  │         body: { instanceId }                    │
+  │    DELETE /api/instance/:id - Remove instance   │
+  │    GET  /health            - Health check       │
+  │                                                 │
+  │  Timeout: ${TIMEOUT_MS / 1000} seconds                          │
+  │  Env var: AGENT_NUDGE_PORT (current: ${String(PORT).padEnd(5)})     │
+  └─────────────────────────────────────────────────┘
   `);
 });

@@ -1,11 +1,11 @@
-// Refocus Content Script
+// Agent Nudge Content Script
 // Injected into watched sites - manages overlay and notification visibility
 
 (function() {
   'use strict';
 
-  const OVERLAY_ID = 'refocus-overlay';
-  const NOTIFICATION_ID = 'refocus-notification';
+  const OVERLAY_ID = 'agent-nudge-overlay';
+  const NOTIFICATION_ID = 'agent-nudge-notification';
 
   // Display modes (must match background.js)
   const DISPLAY_MODE = {
@@ -86,7 +86,7 @@
       });
     } catch (e) {
       // Audio not available, fail silently
-      console.log('Refocus: Could not play notification sound', e);
+      console.log('Agent Nudge: Could not play notification sound', e);
     }
   }
 
@@ -106,7 +106,7 @@
             <path d="M12 6v6l4 2"/>
           </svg>
         </div>
-        <h1 class="refocus-title">Claude needs your attention!</h1>
+        <h1 class="refocus-title">Your agent needs attention!</h1>
         <p class="refocus-subtitle">Your AI assistant is waiting for input</p>
         <div class="refocus-pulse"></div>
       </div>
@@ -132,7 +132,7 @@
         </svg>
       </div>
       <div class="refocus-notification-content">
-        <div class="refocus-notification-title">Claude needs attention</div>
+        <div class="refocus-notification-title">Agent needs attention</div>
         <div class="refocus-notification-subtitle"></div>
       </div>
       <button class="refocus-notification-close" aria-label="Dismiss">

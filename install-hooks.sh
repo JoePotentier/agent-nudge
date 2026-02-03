@@ -1,6 +1,6 @@
 #!/bin/bash
-# Refocus: Install Claude Code hooks
-# This script adds the Refocus hooks to your Claude Code settings
+# Agent Nudge: Install Claude Code hooks
+# This script adds the Agent Nudge hooks to your Claude Code settings
 
 set -e
 
@@ -8,8 +8,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 HOOKS_DIR="$SCRIPT_DIR/hooks"
 SETTINGS_FILE="$HOME/.claude/settings.json"
 
-echo "Refocus Hook Installer"
-echo "======================"
+echo "Agent Nudge Hook Installer"
+echo "=========================="
 echo ""
 
 # Check if hooks directory exists

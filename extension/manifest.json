@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Refocus",
+  "name": "Agent Nudge",
+  "short_name": "AgentNudge",
   "version": "1.0.0",
-  "description": "Displays an attention-grabbing overlay on distracting websites when Claude needs your input",
+  "description": "Displays an attention-grabbing overlay on distracting websites when your AI agent needs your input",
   "permissions": [
     "storage",
     "tabs",
@@ -10,35 +11,11 @@
   ],
   "host_permissions": [
     "http://localhost:*/*",
-    "*://*.youtube.com/*",
-    "*://*.twitter.com/*",
-    "*://*.x.com/*",
-    "*://*.reddit.com/*",
-    "*://*.facebook.com/*",
-    "*://*.instagram.com/*",
-    "*://*.tiktok.com/*",
-    "*://*.twitch.tv/*"
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js"
   },
-  "content_scripts": [
-    {
-      "matches": [
-        "*://*.youtube.com/*",
-        "*://*.twitter.com/*",
-        "*://*.x.com/*",
-        "*://*.reddit.com/*",
-        "*://*.facebook.com/*",
-        "*://*.instagram.com/*",
-        "*://*.tiktok.com/*",
-        "*://*.twitch.tv/*"
-      ],
-      "js": ["content.js"],
-      "css": ["content.css"],
-      "run_at": "document_idle"
-    }
-  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

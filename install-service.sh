@@ -1,17 +1,17 @@
 #!/bin/bash
-# Refocus: Install as macOS launchd service
-# This script sets up the Refocus server to run automatically on login
+# Agent Nudge: Install as macOS launchd service
+# This script sets up the Agent Nudge server to run automatically on login
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SERVER_DIR="$SCRIPT_DIR/server"
-PLIST_TEMPLATE="$SCRIPT_DIR/com.refocus.server.plist"
-PLIST_DEST="$HOME/Library/LaunchAgents/com.refocus.server.plist"
+PLIST_TEMPLATE="$SCRIPT_DIR/com.agent-nudge.server.plist"
+PLIST_DEST="$HOME/Library/LaunchAgents/com.agent-nudge.server.plist"
 NODE_PATH=$(which node)
 
-echo "Refocus Service Installer"
-echo "========================="
+echo "Agent Nudge Service Installer"
+echo "============================="
 echo ""
 
 # Check if node is installed
@@ -28,7 +28,7 @@ echo ""
 mkdir -p "$HOME/Library/LaunchAgents"
 
 # Stop existing service if running
-if launchctl list | grep -q "com.refocus.server"; then
+if launchctl list | grep -q "com.agent-nudge.server"; then
     echo "Stopping existing service..."
     launchctl unload "$PLIST_DEST" 2>/dev/null || true
 fi
@@ -44,8 +44,8 @@ launchctl load "$PLIST_DEST"
 echo "Service installed and started!"
 echo ""
 echo "Commands:"
-echo "  Start:   launchctl load ~/Library/LaunchAgents/com.refocus.server.plist"
-echo "  Stop:    launchctl unload ~/Library/LaunchAgents/com.refocus.server.plist"
-echo "  Logs:    tail -f $SERVER_DIR/refocus.log"
+echo "  Start:   launchctl load ~/Library/LaunchAgents/com.agent-nudge.server.plist"
+echo "  Stop:    launchctl unload ~/Library/LaunchAgents/com.agent-nudge.server.plist"
+echo "  Logs:    tail -f $SERVER_DIR/agent-nudge.log"
 echo ""
 echo "The server will now start automatically when you log in."

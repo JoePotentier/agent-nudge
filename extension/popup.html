@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Refocus</title>
+  <title>Agent Nudge</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <div class="popup-container">
     <header class="header">
-      <h1 class="title">Refocus</h1>
+      <h1 class="title">Agent Nudge</h1>
       <div class="status-badge" id="status-badge">
         <span class="status-dot"></span>
         <span class="status-text" id="status-text">Checking...</span>
@@ -23,6 +23,20 @@
           <input type="checkbox" id="enabled-toggle" checked>
           <span class="toggle-slider"></span>
         </label>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2 class="section-title">Server Settings</h2>
+      <div class="setting-row">
+        <label class="setting-label" for="server-port">Port</label>
+        <div class="setting-input">
+          <input type="number" id="server-port" min="1" max="65535" value="9999" class="number-input port-input">
+        </div>
+      </div>
+      <div class="server-status" id="server-status">
+        <span class="server-dot"></span>
+        <span class="server-text">Checking connection...</span>
       </div>
     </section>
 
@@ -49,28 +63,19 @@
     </section>
 
     <section class="section">
-      <h2 class="section-title">Server Status</h2>
-      <div class="server-status" id="server-status">
-        <span class="server-dot"></span>
-        <span class="server-text">Checking connection...</span>
-      </div>
-    </section>
-
-    <section class="section">
       <h2 class="section-title">Watched Sites</h2>
+      <div class="site-add-row">
+        <input type="text" id="new-site-input" class="text-input" placeholder="example.com">
+        <button class="btn btn-primary btn-small" id="add-site-btn">Add</button>
+      </div>
       <ul class="sites-list" id="sites-list">
-        <li>youtube.com</li>
-        <li>twitter.com / x.com</li>
-        <li>reddit.com</li>
-        <li>facebook.com</li>
-        <li>instagram.com</li>
-        <li>tiktok.com</li>
-        <li>twitch.tv</li>
+        <!-- Sites populated dynamically -->
       </ul>
+      <button class="btn btn-outline btn-small" id="reset-sites-btn">Reset to Defaults</button>
     </section>
 
     <footer class="footer">
-      <p class="footer-text">Stay focused while Claude works!</p>
+      <p class="footer-text">Stay focused while your agent works!</p>
     </footer>
   </div>
 

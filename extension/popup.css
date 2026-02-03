@@ -1,4 +1,4 @@
-/* Refocus Popup Styles */
+/* Agent Nudge Popup Styles */
 
 * {
   margin: 0;
@@ -229,6 +229,24 @@ body {
   background: rgba(245, 158, 11, 0.1);
 }
 
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+.btn-small {
+  flex: none;
+  padding: 8px 12px;
+}
+
+.port-input {
+  width: 80px;
+}
+
 /* Server Status */
 .server-status {
   display: flex;
@@ -259,23 +277,78 @@ body {
   color: #aaa;
 }
 
+/* Site Add Row */
+.site-add-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.text-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #eee;
+  font-size: 13px;
+}
+
+.text-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.text-input::placeholder {
+  color: #666;
+}
+
 /* Sites List */
 .sites-list {
   list-style: none;
   background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
-  padding: 8px 0;
+  padding: 4px 0;
+  margin-bottom: 12px;
+  max-height: 200px;
+  overflow-y: auto;
 }
 
-.sites-list li {
-  padding: 8px 16px;
+.sites-list:empty {
+  display: none;
+}
+
+.site-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
   font-size: 13px;
   color: #aaa;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.sites-list li:last-child {
+.site-item:last-child {
   border-bottom: none;
+}
+
+.site-name {
+  flex: 1;
+}
+
+.site-delete-btn {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.site-delete-btn:hover {
+  color: #ef4444;
 }
 
 /* Footer */

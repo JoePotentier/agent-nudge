@@ -1,37 +1,42 @@
-# Refocus
+# Agent Nudge
 
-A Chrome extension that displays an attention-grabbing overlay on distracting websites when Claude needs your input.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](package.json)
+
+A Chrome extension that displays an attention-grabbing overlay on distracting websites when your AI agent needs your input. Works with Claude Code, and any tool that can make HTTP requests.
 
 ## Features
 
-- **Overlay, not blocking** - Sites remain fully functional; an overlay appears on top
-- **Real-time** - Overlay appears/disappears instantly based on Claude's status
-- **Non-disruptive** - Videos keep playing, content loads normally
-- **Attention-grabbing** - Prominent visual indicator to bring you back to work
+- **Non-blocking overlay** - Sites remain fully functional; an overlay appears on top
+- **Real-time updates** - Overlay appears/disappears instantly based on agent status
+- **Multi-instance support** - Track multiple agent sessions simultaneously
+- **Configurable sites** - Add or remove watched sites via the popup UI
+- **Configurable port** - Use any port for the status server
+- **Generic webhook API** - Integrate with any AI tool or automation
+- **Cross-platform** - Works on macOS, Linux, and Windows
 
-## Architecture
+## How It Works
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        REFOCUS SYSTEM                           │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌──────────────────┐     HTTP Poll      ┌──────────────────┐  │
-│  │ Chrome Extension │ ◄─────────────────► │  Status Server   │  │
-│  │ (Content Script) │    (every 2s)      │  (localhost:9999)│  │
-│  └──────────────────┘                     └──────────────────┘  │
-│           │                                        ▲            │
-│           │ Injects overlay                        │            │
-│           ▼                                        │            │
-│  ┌──────────────────┐                    ┌──────────────────┐  │
-│  │  Watched Sites   │                    │   Claude Code    │  │
-│  │  - YouTube       │                    │     Hooks        │  │
-│  │  - Twitter/X     │                    │  (signals status)│  │
-│  │  - Reddit        │                    └──────────────────┘  │
-│  │  - (configurable)│                                          │
-│  └──────────────────┘                                          │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                      AGENT NUDGE SYSTEM                          │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌──────────────────┐     HTTP Poll      ┌──────────────────┐   │
+│  │ Chrome Extension │ ◄─────────────────► │  Status Server   │   │
+│  │ (Content Script) │    (every 2s)      │  (localhost:9999)│   │
+│  └──────────────────┘                     └──────────────────┘   │
+│           │                                        ▲             │
+│           │ Injects overlay                        │             │
+│           ▼                                        │             │
+│  ┌──────────────────┐                    ┌──────────────────┐   │
+│  │  Watched Sites   │                    │   Any AI Agent   │   │
+│  │  (configurable)  │                    │   - Claude Code  │   │
+│  │                  │                    │   - Custom tools │   │
+│  └──────────────────┘                    │   - Automations  │   │
+│                                          └──────────────────┘   │
+│                                                                  │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ## Installation
@@ -62,7 +67,7 @@ npm run stop        # Stop server
 ./uninstall-service.sh  # Remove service
 ```
 
-The server runs on `http://localhost:9999`.
+The server runs on `http://localhost:9999` by default.
 
 ### 2. Install the Chrome Extension
 
@@ -70,9 +75,11 @@ The server runs on `http://localhost:9999`.
 2. Enable "Developer mode" (toggle in top right)
 3. Click "Load unpacked"
 4. Select the `extension/` folder
-5. The Refocus icon should appear in your toolbar
+5. The Agent Nudge icon should appear in your toolbar
 
-### 3. Configure Claude Code Hooks
+### 3. Configure Claude Code Hooks (Optional)
+
+If using with Claude Code:
 
 **Automatic installation:**
 ```bash
@@ -86,24 +93,47 @@ The server runs on `http://localhost:9999`.
   "hooks": {
     "PreToolUse": [
       {
-        "hooks": [{"type": "command", "command": "/path/to/refocus/hooks/start-work.sh"}]
+        "hooks": [{"type": "command", "command": "/path/to/agent-nudge/hooks/start-work.sh"}]
       }
     ],
     "Stop": [
       {
-        "hooks": [{"type": "command", "command": "/path/to/refocus/hooks/stop-work.sh"}]
+        "hooks": [{"type": "command", "command": "/path/to/agent-nudge/hooks/stop-work.sh"}]
       }
     ]
   }
 }
 ```
 
-Replace `/path/to/refocus` with the actual path to this project.
+Replace `/path/to/agent-nudge` with the actual path to this project.
 
-## Default Watched Sites
+## Configuration
 
-The overlay appears on these sites when Claude needs attention:
+### Server Port
 
+Set a custom port using the `AGENT_NUDGE_PORT` environment variable:
+
+```bash
+# Start server on custom port
+AGENT_NUDGE_PORT=8888 npm start
+```
+
+Or create a `.env` file (copy from `.env.example`):
+```
+AGENT_NUDGE_PORT=8888
+```
+
+Update the port in the extension popup to match.
+
+### Watched Sites
+
+Configure which sites show the overlay via the extension popup:
+
+1. Click the Agent Nudge icon in Chrome
+2. Use the "Watched Sites" section to add/remove sites
+3. Click "Reset to Defaults" to restore the default list
+
+**Default sites:**
 - youtube.com
 - twitter.com / x.com
 - reddit.com
@@ -112,22 +142,128 @@ The overlay appears on these sites when Claude needs attention:
 - tiktok.com
 - twitch.tv
 
-You can configure these in the extension popup.
+## Generic Integration (Any Tool)
 
-## Usage
+Agent Nudge works with any tool that can make HTTP requests. Use the simple webhook API to signal when your agent/tool starts and stops working.
 
-1. Start the status server: `npm start`
-2. Use Claude Code normally
-3. When you switch to a distracting site while Claude is waiting for input, you'll see the overlay
-4. When Claude is actively working, the overlay disappears
+### API Endpoints
 
-### Extension Popup
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/start` | POST | Signal agent started working |
+| `/api/stop` | POST | Signal agent stopped (needs attention) |
+| `/api/heartbeat` | POST | Keep session alive |
+| `/api/status` | GET | Get current status |
+| `/api/unregister` | POST | Remove an instance |
+| `/health` | GET | Health check |
+
+### Example: curl
+
+```bash
+# Signal work started (hides overlay)
+curl -X POST http://localhost:9999/api/start \
+  -H "Content-Type: application/json" \
+  -d '{"instanceId": "my-tool", "name": "My Custom Tool", "source": "my-tool"}'
+
+# Signal work stopped (shows overlay)
+curl -X POST http://localhost:9999/api/stop \
+  -H "Content-Type: application/json" \
+  -d '{"instanceId": "my-tool", "source": "my-tool"}'
+
+# Check status
+curl http://localhost:9999/api/status
+
+# Remove instance when done
+curl -X POST http://localhost:9999/api/unregister \
+  -H "Content-Type: application/json" \
+  -d '{"instanceId": "my-tool"}'
+```
+
+### Example: Python
+
+```python
+import requests
+
+BASE_URL = "http://localhost:9999"
+
+def start_work(instance_id, name="My Agent"):
+    requests.post(f"{BASE_URL}/api/start", json={
+        "instanceId": instance_id,
+        "name": name,
+        "source": "python-agent"
+    })
+
+def stop_work(instance_id):
+    requests.post(f"{BASE_URL}/api/stop", json={
+        "instanceId": instance_id,
+        "source": "python-agent"
+    })
+
+# Usage
+start_work("session-123", "Data Processing")
+# ... do work ...
+stop_work("session-123")
+```
+
+### Example: Node.js
+
+```javascript
+const BASE_URL = 'http://localhost:9999';
+
+async function startWork(instanceId, name = 'My Agent') {
+  await fetch(`${BASE_URL}/api/start`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ instanceId, name, source: 'node-agent' })
+  });
+}
+
+async function stopWork(instanceId) {
+  await fetch(`${BASE_URL}/api/stop`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ instanceId, source: 'node-agent' })
+  });
+}
+```
+
+## Windows Setup
+
+For Windows users, use the `.bat` hook files instead of `.sh`:
+
+1. Configure Claude Code hooks to use the Windows batch files:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [{"type": "command", "command": "C:\\path\\to\\agent-nudge\\hooks\\start-work.bat"}]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [{"type": "command", "command": "C:\\path\\to\\agent-nudge\\hooks\\stop-work.bat"}]
+      }
+    ]
+  }
+}
+```
+
+2. Set the port via environment variable (optional):
+```cmd
+set AGENT_NUDGE_PORT=8888
+```
+
+## Extension Popup
 
 Click the extension icon to:
 - Toggle the extension on/off
-- See current Claude status (Working/Needs Attention)
+- Configure the server port
+- See current agent status (Working/Needs Attention)
+- View active instance count
 - Dismiss the overlay temporarily (5, 15, or 30 minutes)
-- View server connection status
+- Manage watched sites
 
 ## Testing
 
@@ -137,14 +273,15 @@ Click the extension icon to:
 # Check status
 curl http://localhost:9999/api/status
 
-# Simulate Claude starting work (hides overlay)
-curl -X POST http://localhost:9999/api/start
+# Simulate agent starting work (hides overlay)
+curl -X POST http://localhost:9999/api/start \
+  -H "Content-Type: application/json" \
+  -d '{"source": "test"}'
 
-# Simulate Claude stopping (shows overlay)
-curl -X POST http://localhost:9999/api/stop
-
-# Send heartbeat
-curl -X POST http://localhost:9999/api/heartbeat
+# Simulate agent stopping (shows overlay)
+curl -X POST http://localhost:9999/api/stop \
+  -H "Content-Type: application/json" \
+  -d '{"source": "test"}'
 ```
 
 ### Test Overlay
@@ -159,7 +296,7 @@ curl -X POST http://localhost:9999/api/heartbeat
 
 ## Timeout Behavior
 
-If no heartbeat is received for 60 seconds while Claude is marked as active, the server automatically transitions to "needs attention" state, showing the overlay.
+If no heartbeat is received for 5 minutes while an agent is marked as active, the server automatically transitions to "needs attention" state, showing the overlay.
 
 ## Troubleshooting
 
@@ -167,12 +304,13 @@ If no heartbeat is received for 60 seconds while Claude is marked as active, the
 
 1. Check if the server is running: `curl http://localhost:9999/health`
 2. Check the extension is enabled in `chrome://extensions`
-3. Make sure you're on a watched site
-4. Check the browser console for errors
+3. Make sure the site is in your watched sites list
+4. Verify the port matches between server and extension
+5. Check the browser console for errors
 
 ### Server connection issues
 
-1. Make sure the server is running on port 9999
+1. Make sure the server is running on the correct port
 2. Check for firewall or proxy issues
 3. Verify CORS is working (check browser console)
 
@@ -185,7 +323,7 @@ If no heartbeat is received for 60 seconds while Claude is marked as active, the
 ## Project Structure
 
 ```
-refocus/
+agent-nudge/
 ├── extension/              # Chrome Extension
 │   ├── manifest.json       # Extension manifest (V3)
 │   ├── background.js       # Service worker - polls status
@@ -199,14 +337,19 @@ refocus/
 │   ├── package.json
 │   ├── server.js           # Express server
 │   └── README.md
-├── hooks/                  # Claude Code integration
-│   ├── start-work.sh       # Signal work started
-│   └── stop-work.sh        # Signal work stopped
+├── hooks/                  # Agent integration hooks
+│   ├── start-work.sh       # macOS/Linux: Signal work started
+│   ├── stop-work.sh        # macOS/Linux: Signal work stopped
+│   ├── exit.sh             # macOS/Linux: Unregister on exit
+│   ├── start-work.bat      # Windows: Signal work started
+│   ├── stop-work.bat       # Windows: Signal work stopped
+│   └── exit.bat            # Windows: Unregister on exit
 ├── install-hooks.sh        # Auto-install Claude hooks
 ├── install-service.sh      # Install as macOS service
 ├── uninstall-service.sh    # Remove macOS service
-├── com.refocus.server.plist # macOS launchd template
+├── .env.example            # Environment configuration template
 ├── package.json            # Root package
+├── LICENSE                 # MIT License
 └── README.md               # This file
 ```
 

@@ -1,8 +1,19 @@
-// Refocus Background Service Worker
+// Agent Nudge Background Service Worker
 // Polls status server and broadcasts to content scripts
 
-const STATUS_URL = 'http://localhost:9999/api/status';
+const DEFAULT_PORT = 9999;
+const DEFAULT_SITES = [
+  'youtube.com',
+  'twitter.com',
+  'x.com',
+  'reddit.com',
+  'facebook.com',
+  'instagram.com',
+  'tiktok.com',
+  'twitch.tv'
+];
 const POLL_INTERVAL = 2000; // 2 seconds
+const CONTENT_SCRIPT_ID = 'agent-nudge-content-script';
 
 // Display modes
 const DISPLAY_MODE = {
@@ -16,9 +27,65 @@ let isEnabled = true;
 let dismissedUntil = 0;
 let lastStatus = null;
 let autoDismissSeconds = 5; // Default 5 seconds, 0 = disabled
+let serverPort = DEFAULT_PORT;
+let watchedSites = [...DEFAULT_SITES];
+
+// Build status URL from port
+function getStatusUrl() {
+  return `http://localhost:${serverPort}/api/status`;
+}
+
+// Convert domain to match pattern for content scripts
+function domainToMatchPattern(domain) {
+  // Remove any protocol if present
+  domain = domain.replace(/^https?:\/\//, '');
+  // Remove trailing slash
+  domain = domain.replace(/\/$/, '');
+  // Add wildcard for subdomains
+  return `*://*.${domain}/*`;
+}
+
+// Register content scripts dynamically based on watched sites
+async function registerContentScripts() {
+  try {
+    // First, unregister any existing scripts
+    try {
+      await chrome.scripting.unregisterContentScripts({ ids: [CONTENT_SCRIPT_ID] });
+    } catch (e) {
+      // Script might not exist, ignore
+    }
+
+    if (watchedSites.length === 0) {
+      console.log('No sites configured, content scripts not registered');
+      return;
+    }
+
+    const matches = watchedSites.map(domainToMatchPattern);
+
+    await chrome.scripting.registerContentScripts([{
+      id: CONTENT_SCRIPT_ID,
+      matches: matches,
+      js: ['content.js'],
+      css: ['content.css'],
+      runAt: 'document_idle'
+    }]);
+
+    console.log('Content scripts registered for:', watchedSites);
+  } catch (error) {
+    console.error('Error registering content scripts:', error);
+  }
+}
 
 // Initialize extension state from storage
-chrome.storage.local.get(['isEnabled', 'dismissedUntil', 'autoDismissSeconds'], (result) => {
+async function initializeState() {
+  const result = await chrome.storage.sync.get([
+    'isEnabled',
+    'dismissedUntil',
+    'autoDismissSeconds',
+    'serverPort',
+    'watchedSites'
+  ]);
+
   if (result.isEnabled !== undefined) {
     isEnabled = result.isEnabled;
   }
@@ -28,13 +95,27 @@ chrome.storage.local.get(['isEnabled', 'dismissedUntil', 'autoDismissSeconds'], 
   if (result.autoDismissSeconds !== undefined) {
     autoDismissSeconds = result.autoDismissSeconds;
   }
-});
+  if (result.serverPort !== undefined) {
+    serverPort = result.serverPort;
+  }
+  if (result.watchedSites !== undefined) {
+    watchedSites = result.watchedSites;
+  }
+
+  // Register content scripts with current sites
+  await registerContentScripts();
+}
 
 // Determine display mode based on server status
 function determineDisplayMode(data) {
-  if (!data || data.totalCount === 0) {
-    // No instances registered - treat as server unavailable, show full overlay
+  if (!data) {
+    // Server unavailable - show full overlay as safe default
     return DISPLAY_MODE.FULL_OVERLAY;
+  }
+
+  if (data.totalCount === 0) {
+    // No instances registered - no agent sessions running, allow browsing
+    return DISPLAY_MODE.HIDDEN;
   }
 
   if (data.allNeedAttention) {
@@ -65,7 +146,7 @@ async function pollStatus() {
   }
 
   try {
-    const response = await fetch(STATUS_URL, {
+    const response = await fetch(getStatusUrl(), {
       method: 'GET',
       headers: { 'Accept': 'application/json' }
     });
@@ -112,7 +193,11 @@ async function broadcastStatus(mode, statusData) {
 
 // Start polling
 setInterval(pollStatus, POLL_INTERVAL);
-pollStatus(); // Initial poll
+
+// Initialize on startup
+initializeState().then(() => {
+  pollStatus(); // Initial poll
+});
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -122,29 +207,58 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       statusData: lastStatus,
       isEnabled: isEnabled,
       dismissedUntil: dismissedUntil,
-      autoDismissSeconds: autoDismissSeconds
+      autoDismissSeconds: autoDismissSeconds,
+      serverPort: serverPort,
+      watchedSites: watchedSites,
+      defaultSites: DEFAULT_SITES
     });
     return true;
   }
 
   if (message.type === 'SET_AUTO_DISMISS_SECONDS') {
     autoDismissSeconds = message.seconds;
-    chrome.storage.local.set({ autoDismissSeconds: autoDismissSeconds });
+    chrome.storage.sync.set({ autoDismissSeconds: autoDismissSeconds });
     sendResponse({ success: true });
     return true;
   }
 
   if (message.type === 'SET_ENABLED') {
     isEnabled = message.enabled;
-    chrome.storage.local.set({ isEnabled: isEnabled });
+    chrome.storage.sync.set({ isEnabled: isEnabled });
     pollStatus(); // Trigger immediate status update
     sendResponse({ success: true });
     return true;
   }
 
+  if (message.type === 'SET_SERVER_PORT') {
+    serverPort = message.port;
+    chrome.storage.sync.set({ serverPort: serverPort });
+    pollStatus(); // Trigger immediate status update with new port
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (message.type === 'SET_WATCHED_SITES') {
+    watchedSites = message.sites;
+    chrome.storage.sync.set({ watchedSites: watchedSites });
+    registerContentScripts().then(() => {
+      sendResponse({ success: true });
+    });
+    return true; // Keep channel open for async response
+  }
+
+  if (message.type === 'RESET_SITES_TO_DEFAULT') {
+    watchedSites = [...DEFAULT_SITES];
+    chrome.storage.sync.set({ watchedSites: watchedSites });
+    registerContentScripts().then(() => {
+      sendResponse({ success: true, sites: watchedSites });
+    });
+    return true;
+  }
+
   if (message.type === 'DISMISS') {
     dismissedUntil = Date.now() + (message.minutes * 60 * 1000);
-    chrome.storage.local.set({ dismissedUntil: dismissedUntil });
+    chrome.storage.sync.set({ dismissedUntil: dismissedUntil });
     pollStatus(); // Trigger immediate status update
     sendResponse({ success: true });
     return true;
@@ -152,7 +266,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'CLEAR_DISMISS') {
     dismissedUntil = 0;
-    chrome.storage.local.set({ dismissedUntil: 0 });
+    chrome.storage.sync.set({ dismissedUntil: 0 });
     pollStatus();
     sendResponse({ success: true });
     return true;
@@ -161,5 +275,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Handle extension install/update
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('Refocus extension installed/updated');
+  console.log('Agent Nudge extension installed/updated');
+  // Initialize with defaults if not set
+  chrome.storage.sync.get(['watchedSites'], (result) => {
+    if (result.watchedSites === undefined) {
+      chrome.storage.sync.set({ watchedSites: DEFAULT_SITES });
+    }
+  });
 });

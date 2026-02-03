@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.refocus.server</string>
+    <string>com.agent-nudge.server</string>
     <key>ProgramArguments</key>
     <array>
         <string>/usr/local/bin/node</string>
@@ -16,8 +16,8 @@
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>__SERVER_PATH__/refocus.log</string>
+    <string>__SERVER_PATH__/agent-nudge.log</string>
     <key>StandardErrorPath</key>
-    <string>__SERVER_PATH__/refocus.log</string>
+    <string>__SERVER_PATH__/agent-nudge.log</string>
 </dict>
 </plist>

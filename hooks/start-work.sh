@@ -1,14 +1,17 @@
 #!/bin/bash
-# Refocus: Signal that Claude started working
+# Agent Nudge: Signal that agent started working
 # Triggered by UserPromptSubmit hook (fires when user sends a message)
+
+# Configurable port (default: 9999)
+PORT="${AGENT_NUDGE_PORT:-9999}"
 
 # Use CLAUDE_SESSION_ID if available, otherwise use PWD as unique identifier
 INSTANCE_ID="${CLAUDE_SESSION_ID:-$PWD}"
 PROJECT_NAME="$(basename "$PWD")"
 
-curl -s -X POST http://localhost:9999/api/start \
+curl -s -X POST "http://localhost:${PORT}/api/start" \
   -H "Content-Type: application/json" \
-  -d "{\"instanceId\": \"$INSTANCE_ID\", \"name\": \"$PROJECT_NAME\"}" \
+  -d "{\"instanceId\": \"$INSTANCE_ID\", \"name\": \"$PROJECT_NAME\", \"source\": \"claude-code\"}" \
   > /dev/null 2>&1
 
 exit 0

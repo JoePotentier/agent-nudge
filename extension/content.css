@@ -1,6 +1,6 @@
-/* Refocus Overlay Styles */
+/* Agent Nudge Overlay Styles */
 
-#refocus-overlay {
+#agent-nudge-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -19,7 +19,7 @@
   -webkit-backdrop-filter: blur(4px);
 }
 
-#refocus-overlay.refocus-visible {
+#agent-nudge-overlay.refocus-visible {
   opacity: 1;
   visibility: visible;
   pointer-events: auto;
@@ -86,7 +86,7 @@
 }
 
 /* Notification Styles (top right corner) */
-#refocus-notification {
+#agent-nudge-notification {
   position: fixed;
   top: 20px;
   right: 20px;
@@ -105,7 +105,7 @@
   pointer-events: none;
 }
 
-#refocus-notification.refocus-visible {
+#agent-nudge-notification.refocus-visible {
   opacity: 1;
   visibility: visible;
   transform: translateX(0);
@@ -245,7 +245,7 @@
     height: 280px;
   }
 
-  #refocus-notification {
+  #agent-nudge-notification {
     top: 10px;
     right: 10px;
     padding: 10px 12px;

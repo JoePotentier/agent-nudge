@@ -1,4 +1,4 @@
-// Refocus Popup Script
+// Agent Nudge Popup Script
 
 document.addEventListener('DOMContentLoaded', () => {
   const statusBadge = document.getElementById('status-badge');
@@ -7,6 +7,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const serverStatus = document.getElementById('server-status');
   const clearDismissBtn = document.getElementById('clear-dismiss');
   const autoDismissInput = document.getElementById('auto-dismiss');
+  const serverPortInput = document.getElementById('server-port');
+  const sitesList = document.getElementById('sites-list');
+  const newSiteInput = document.getElementById('new-site-input');
+  const addSiteBtn = document.getElementById('add-site-btn');
+  const resetSitesBtn = document.getElementById('reset-sites-btn');
+
+  let currentWatchedSites = [];
 
   // Get current status from background
   function updateStatus() {
@@ -28,6 +35,17 @@ document.addEventListener('DOMContentLoaded', () => {
       // Update auto-dismiss input
       if (response.autoDismissSeconds !== undefined) {
         autoDismissInput.value = response.autoDismissSeconds;
+      }
+
+      // Update server port input
+      if (response.serverPort !== undefined) {
+        serverPortInput.value = response.serverPort;
+      }
+
+      // Update watched sites
+      if (response.watchedSites !== undefined) {
+        currentWatchedSites = response.watchedSites;
+        renderSitesList();
       }
 
       // Update status badge based on mode
@@ -87,11 +105,96 @@ document.addEventListener('DOMContentLoaded', () => {
     serverStatus.querySelector('.server-text').textContent = text;
   }
 
+  // Render the sites list
+  function renderSitesList() {
+    sitesList.innerHTML = '';
+    currentWatchedSites.forEach((site) => {
+      const li = document.createElement('li');
+      li.className = 'site-item';
+
+      const siteText = document.createElement('span');
+      siteText.className = 'site-name';
+      siteText.textContent = site;
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'site-delete-btn';
+      deleteBtn.textContent = '\u00D7';
+      deleteBtn.title = 'Remove site';
+      deleteBtn.addEventListener('click', () => removeSite(site));
+
+      li.appendChild(siteText);
+      li.appendChild(deleteBtn);
+      sitesList.appendChild(li);
+    });
+  }
+
+  // Add a new site
+  function addSite() {
+    let site = newSiteInput.value.trim().toLowerCase();
+    if (!site) return;
+
+    // Remove protocol if present
+    site = site.replace(/^https?:\/\//, '');
+    // Remove trailing slash
+    site = site.replace(/\/$/, '');
+    // Remove www. prefix
+    site = site.replace(/^www\./, '');
+
+    if (!site || currentWatchedSites.includes(site)) {
+      newSiteInput.value = '';
+      return;
+    }
+
+    currentWatchedSites.push(site);
+    newSiteInput.value = '';
+
+    chrome.runtime.sendMessage({
+      type: 'SET_WATCHED_SITES',
+      sites: currentWatchedSites
+    }, () => {
+      renderSitesList();
+    });
+  }
+
+  // Remove a site
+  function removeSite(site) {
+    currentWatchedSites = currentWatchedSites.filter(s => s !== site);
+
+    chrome.runtime.sendMessage({
+      type: 'SET_WATCHED_SITES',
+      sites: currentWatchedSites
+    }, () => {
+      renderSitesList();
+    });
+  }
+
+  // Reset to default sites
+  function resetSites() {
+    chrome.runtime.sendMessage({ type: 'RESET_SITES_TO_DEFAULT' }, (response) => {
+      if (response && response.sites) {
+        currentWatchedSites = response.sites;
+        renderSitesList();
+      }
+    });
+  }
+
   // Enable/disable toggle
   enabledToggle.addEventListener('change', () => {
     chrome.runtime.sendMessage({
       type: 'SET_ENABLED',
       enabled: enabledToggle.checked
+    }, () => {
+      updateStatus();
+    });
+  });
+
+  // Server port input
+  serverPortInput.addEventListener('change', () => {
+    const port = Math.max(1, Math.min(65535, parseInt(serverPortInput.value) || 9999));
+    serverPortInput.value = port;
+    chrome.runtime.sendMessage({
+      type: 'SET_SERVER_PORT',
+      port: port
     }, () => {
       updateStatus();
     });
@@ -106,6 +209,19 @@ document.addEventListener('DOMContentLoaded', () => {
       seconds: seconds
     });
   });
+
+  // Add site button
+  addSiteBtn.addEventListener('click', addSite);
+
+  // Enter key to add site
+  newSiteInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      addSite();
+    }
+  });
+
+  // Reset sites button
+  resetSitesBtn.addEventListener('click', resetSites);
 
   // Dismiss buttons
   document.getElementById('dismiss-5').addEventListener('click', () => {

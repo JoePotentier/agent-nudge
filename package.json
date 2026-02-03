@@ -1,18 +1,20 @@
 {
-  "name": "refocus",
+  "name": "agent-nudge",
   "version": "1.0.0",
-  "description": "Chrome extension that displays an overlay on distracting sites when Claude needs your attention",
+  "description": "Chrome extension that displays an overlay on distracting sites when your AI agent needs your attention",
   "private": true,
   "workspaces": [
     "server"
   ],
   "scripts": {
     "start": "npm start --prefix server",
-    "server": "npm start --prefix server"
+    "server": "npm start --prefix server",
+    "kill": "PORT=${AGENT_NUDGE_PORT:-9999}; lsof -ti:$PORT | xargs kill -9 2>/dev/null || echo \"No process on port $PORT\""
   },
   "keywords": [
     "chrome-extension",
     "productivity",
+    "ai-agent",
     "claude",
     "focus"
   ],
