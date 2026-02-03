@@ -255,7 +255,6 @@
       autoDismissTimer = setTimeout(() => {
         notificationDismissed = true;
         hideNotification();
-        logDismissalToServer('auto_dismiss');
       }, autoDismissSeconds * 1000);
     }
   }
