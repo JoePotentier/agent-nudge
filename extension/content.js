@@ -19,9 +19,13 @@
   let currentMode = DISPLAY_MODE.HIDDEN;
   let wasVideoPlaying = false;
   let notificationDismissed = false;
-  let audioContext = null;
+  let overlayDismissed = false;
+  let allowOverlayDismiss = true;
+  let soundEnabled = true;
   let autoDismissTimer = null;
   let autoDismissSeconds = 5;
+  let serverPort = 9999;
+  let lastStatusData = null;
 
   // Get the main video element on YouTube
   function getYouTubeVideo() {
@@ -48,45 +52,13 @@
     }
   }
 
-  // Play a pleasant notification sound using Web Audio API
+  // Play notification sound via background script (uses offscreen document)
   function playNotificationSound() {
+    if (!soundEnabled) return;
     try {
-      if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      }
-
-      // Resume context if suspended (browser autoplay policy)
-      if (audioContext.state === 'suspended') {
-        audioContext.resume();
-      }
-
-      const now = audioContext.currentTime;
-
-      // Create a pleasant two-tone chime
-      const frequencies = [523.25, 659.25]; // C5 and E5 - pleasant major third
-
-      frequencies.forEach((freq, index) => {
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(freq, now);
-
-        // Gentle fade in and out
-        const startTime = now + (index * 0.15);
-        gainNode.gain.setValueAtTime(0, startTime);
-        gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.05);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + 0.5);
-
-        oscillator.start(startTime);
-        oscillator.stop(startTime + 0.5);
-      });
+      chrome.runtime.sendMessage({ type: 'PLAY_SOUND' });
     } catch (e) {
-      // Audio not available, fail silently
-      console.log('Agent Nudge: Could not play notification sound', e);
+      // Extension context invalidated, fail silently
     }
   }
 
@@ -99,6 +71,11 @@
     overlay = document.createElement('div');
     overlay.id = OVERLAY_ID;
     overlay.innerHTML = `
+      <button class="refocus-overlay-close" aria-label="Dismiss overlay" style="display: none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
       <div class="refocus-content">
         <div class="refocus-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -112,8 +89,49 @@
       </div>
     `;
 
+    // Add dismiss handler for overlay close button
+    const closeBtn = overlay.querySelector('.refocus-overlay-close');
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      handleOverlayDismiss();
+    });
+
     document.body.appendChild(overlay);
     return overlay;
+  }
+
+  // Handle overlay dismissal
+  function handleOverlayDismiss() {
+    overlayDismissed = true;
+    hideOverlay();
+    resumeVideo();
+    logDismissalToServer();
+  }
+
+  // Log dismissal event via background script (avoids local network access prompts)
+  function logDismissalToServer(dismissType = 'overlay_x_button') {
+    try {
+      const waitingCount = lastStatusData?.needsAttentionCount || 0;
+      const site = window.location.hostname.replace(/^www\./, '');
+
+      chrome.runtime.sendMessage({
+        type: 'LOG_DISMISSAL',
+        site: site,
+        instancesWaiting: waitingCount,
+        dismissType: dismissType
+      });
+    } catch (e) {
+      // Extension context invalidated, fail silently
+    }
+  }
+
+  // Update overlay close button visibility based on setting
+  function updateOverlayCloseButton() {
+    if (!overlay) return;
+    const closeBtn = overlay.querySelector('.refocus-overlay-close');
+    if (closeBtn) {
+      closeBtn.style.display = allowOverlayDismiss ? 'flex' : 'none';
+    }
   }
 
   // Create the notification element (top right corner)
@@ -148,6 +166,7 @@
       e.stopPropagation();
       notificationDismissed = true;
       hideNotification();
+      logDismissalToServer('notification_x_button');
     });
 
     document.body.appendChild(notification);
@@ -179,9 +198,15 @@
 
   // Show full-screen overlay
   function showOverlay(playSound = false) {
+    // Don't show if dismissed
+    if (overlayDismissed) return;
+
     if (!overlay) {
       overlay = createOverlay();
     }
+
+    // Update close button visibility
+    updateOverlayCloseButton();
 
     // Pause any playing video
     pauseVideo();
@@ -217,16 +242,20 @@
       playNotificationSound();
     }
 
+    // Only set up auto-dismiss timer when notification first appears
+    const isAlreadyVisible = notification.classList.contains('refocus-visible');
+
     // Force reflow for animation
     notification.offsetHeight;
     notification.classList.add('refocus-visible');
 
-    // Set up auto-dismiss timer
-    clearAutoDismissTimer();
-    if (autoDismissSeconds > 0) {
+    // Set up auto-dismiss timer only on first appearance
+    if (!isAlreadyVisible && autoDismissSeconds > 0) {
+      clearAutoDismissTimer();
       autoDismissTimer = setTimeout(() => {
         notificationDismissed = true;
         hideNotification();
+        logDismissalToServer('auto_dismiss');
       }, autoDismissSeconds * 1000);
     }
   }
@@ -250,10 +279,12 @@
   function updateDisplay(mode, statusData) {
     const previousMode = currentMode;
     currentMode = mode;
+    lastStatusData = statusData;
 
-    // Reset notification dismissed state when mode changes from hidden
+    // Reset dismissed states when mode changes from hidden (agent was working, now needs attention again)
     if (previousMode === DISPLAY_MODE.HIDDEN && mode !== DISPLAY_MODE.HIDDEN) {
       notificationDismissed = false;
+      overlayDismissed = false;
     }
 
     // Determine if we should play a sound (only when transitioning to attention-needed state)
@@ -291,6 +322,16 @@
     if (message.type === 'STATUS_UPDATE') {
       if (message.autoDismissSeconds !== undefined) {
         autoDismissSeconds = message.autoDismissSeconds;
+      }
+      if (message.allowOverlayDismiss !== undefined) {
+        allowOverlayDismiss = message.allowOverlayDismiss;
+        updateOverlayCloseButton();
+      }
+      if (message.soundEnabled !== undefined) {
+        soundEnabled = message.soundEnabled;
+      }
+      if (message.serverPort !== undefined) {
+        serverPort = message.serverPort;
       }
       updateDisplay(message.mode, message.statusData);
       sendResponse({ received: true });

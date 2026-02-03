@@ -27,8 +27,33 @@ let isEnabled = true;
 let dismissedUntil = 0;
 let lastStatus = null;
 let autoDismissSeconds = 5; // Default 5 seconds, 0 = disabled
+let allowOverlayDismiss = true; // Allow X button on full overlay
+let soundEnabled = true; // Enable sound notifications
 let serverPort = DEFAULT_PORT;
 let watchedSites = [...DEFAULT_SITES];
+
+// Offscreen document management for audio playback
+let creatingOffscreen = null;
+
+async function ensureOffscreenDocument() {
+  const existingContexts = await chrome.runtime.getContexts({
+    contextTypes: ['OFFSCREEN_DOCUMENT']
+  });
+
+  if (existingContexts.length > 0) return;
+
+  if (creatingOffscreen) {
+    await creatingOffscreen;
+  } else {
+    creatingOffscreen = chrome.offscreen.createDocument({
+      url: 'offscreen.html',
+      reasons: ['AUDIO_PLAYBACK'],
+      justification: 'Playing notification sound for agent attention alerts'
+    });
+    await creatingOffscreen;
+    creatingOffscreen = null;
+  }
+}
 
 // Build status URL from port
 function getStatusUrl() {
@@ -82,6 +107,8 @@ async function initializeState() {
     'isEnabled',
     'dismissedUntil',
     'autoDismissSeconds',
+    'allowOverlayDismiss',
+    'soundEnabled',
     'serverPort',
     'watchedSites'
   ]);
@@ -94,6 +121,12 @@ async function initializeState() {
   }
   if (result.autoDismissSeconds !== undefined) {
     autoDismissSeconds = result.autoDismissSeconds;
+  }
+  if (result.allowOverlayDismiss !== undefined) {
+    allowOverlayDismiss = result.allowOverlayDismiss;
+  }
+  if (result.soundEnabled !== undefined) {
+    soundEnabled = result.soundEnabled;
   }
   if (result.serverPort !== undefined) {
     serverPort = result.serverPort;
@@ -179,7 +212,10 @@ async function broadcastStatus(mode, statusData) {
             type: 'STATUS_UPDATE',
             mode: mode,
             statusData: statusData,
-            autoDismissSeconds: autoDismissSeconds
+            autoDismissSeconds: autoDismissSeconds,
+            allowOverlayDismiss: allowOverlayDismiss,
+            soundEnabled: soundEnabled,
+            serverPort: serverPort
           });
         } catch (e) {
           // Content script not loaded on this tab, ignore
@@ -199,7 +235,7 @@ initializeState().then(() => {
   pollStatus(); // Initial poll
 });
 
-// Listen for messages from popup
+// Listen for messages from popup and content scripts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'GET_STATUS') {
     sendResponse({
@@ -208,6 +244,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       isEnabled: isEnabled,
       dismissedUntil: dismissedUntil,
       autoDismissSeconds: autoDismissSeconds,
+      allowOverlayDismiss: allowOverlayDismiss,
+      soundEnabled: soundEnabled,
       serverPort: serverPort,
       watchedSites: watchedSites,
       defaultSites: DEFAULT_SITES
@@ -215,9 +253,32 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'PLAY_SOUND') {
+    ensureOffscreenDocument().then(() => {
+      chrome.runtime.sendMessage({ type: 'PLAY_SOUND' });
+    });
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (message.type === 'SET_SOUND_ENABLED') {
+    soundEnabled = message.enabled;
+    chrome.storage.sync.set({ soundEnabled: soundEnabled });
+    sendResponse({ success: true });
+    return true;
+  }
+
   if (message.type === 'SET_AUTO_DISMISS_SECONDS') {
     autoDismissSeconds = message.seconds;
     chrome.storage.sync.set({ autoDismissSeconds: autoDismissSeconds });
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (message.type === 'SET_ALLOW_OVERLAY_DISMISS') {
+    allowOverlayDismiss = message.allow;
+    chrome.storage.sync.set({ allowOverlayDismiss: allowOverlayDismiss });
+    pollStatus(); // Trigger immediate status update to content scripts
     sendResponse({ success: true });
     return true;
   }
@@ -268,6 +329,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     dismissedUntil = 0;
     chrome.storage.sync.set({ dismissedUntil: 0 });
     pollStatus();
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (message.type === 'LOG_DISMISSAL') {
+    // Log dismissal to server
+    fetch(`http://localhost:${serverPort}/api/dismiss-log`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        site: message.site,
+        instancesWaiting: message.instancesWaiting,
+        dismissType: message.dismissType
+      })
+    }).catch(e => {
+      console.log('Could not log dismissal:', e);
+    });
     sendResponse({ success: true });
     return true;
   }
