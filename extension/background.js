@@ -264,6 +264,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'SET_SOUND_ENABLED') {
     soundEnabled = message.enabled;
     chrome.storage.sync.set({ soundEnabled: soundEnabled });
+    pollStatus(); // Trigger immediate status update to content scripts
     sendResponse({ success: true });
     return true;
   }
@@ -271,6 +272,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'SET_AUTO_DISMISS_SECONDS') {
     autoDismissSeconds = message.seconds;
     chrome.storage.sync.set({ autoDismissSeconds: autoDismissSeconds });
+    pollStatus(); // Trigger immediate status update to content scripts
     sendResponse({ success: true });
     return true;
   }

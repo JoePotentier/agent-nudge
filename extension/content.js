@@ -24,7 +24,6 @@
   let soundEnabled = true;
   let autoDismissTimer = null;
   let autoDismissSeconds = 5;
-  let serverPort = 9999;
   let lastStatusData = null;
 
   // Get the main video element on YouTube
@@ -332,9 +331,6 @@
       }
       if (message.soundEnabled !== undefined) {
         soundEnabled = message.soundEnabled;
-      }
-      if (message.serverPort !== undefined) {
-        serverPort = message.serverPort;
       }
       updateDisplay(message.mode, message.statusData);
       sendResponse({ received: true });
