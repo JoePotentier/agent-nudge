@@ -6,8 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "start:bg": "nohup node server.js > agent-nudge.log 2>&1 & echo $! > agent-nudge.pid && echo 'Server started in background (PID: '$(cat agent-nudge.pid)')'",
-    "stop": "if [ -f agent-nudge.pid ]; then kill $(cat agent-nudge.pid) 2>/dev/null && rm agent-nudge.pid && echo 'Server stopped'; else echo 'No server running'; fi",
-    "status": "if [ -f agent-nudge.pid ] && kill -0 $(cat agent-nudge.pid) 2>/dev/null; then echo 'Server running (PID: '$(cat agent-nudge.pid)')'; else echo 'Server not running'; fi",
+    "stop": "if [ -f agent-nudge.pid ]; then kill $(cat agent-nudge.pid) 2>/dev/null; rm -f agent-nudge.pid; echo 'Server stopped'; elif PID=$(lsof -ti :${AGENT_NUDGE_PORT:-9999} 2>/dev/null); then kill $PID && echo 'Server stopped (PID: '$PID')'; else echo 'No server running'; fi",
+    "status": "if [ -f agent-nudge.pid ] && kill -0 $(cat agent-nudge.pid) 2>/dev/null; then echo 'Server running (PID: '$(cat agent-nudge.pid)')'; elif PID=$(lsof -ti :${AGENT_NUDGE_PORT:-9999} 2>/dev/null); then echo 'Server running (PID: '$PID')'; else echo 'Server not running'; fi",
     "logs": "tail -f agent-nudge.log"
   },
   "dependencies": {

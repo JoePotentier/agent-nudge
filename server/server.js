@@ -1,8 +1,11 @@
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const PORT = parseInt(process.env.AGENT_NUDGE_PORT, 10) || 9999;
+const DISMISSAL_LOG_FILE = path.join(__dirname, 'dismissals.json');
 
 // Middleware
 app.use(cors());
@@ -167,6 +170,122 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime() });
 });
 
+// ========== Dismissal Logging ==========
+
+// Initialize dismissal log file if it doesn't exist
+function initDismissalLog() {
+  if (!fs.existsSync(DISMISSAL_LOG_FILE)) {
+    const initialData = {
+      dismissals: [],
+      dailyCounts: {},
+      totalCount: 0
+    };
+    fs.writeFileSync(DISMISSAL_LOG_FILE, JSON.stringify(initialData, null, 2));
+  }
+}
+
+// Read dismissal log
+function readDismissalLog() {
+  try {
+    initDismissalLog();
+    const data = fs.readFileSync(DISMISSAL_LOG_FILE, 'utf8');
+    return JSON.parse(data);
+  } catch (e) {
+    console.error('Error reading dismissal log:', e);
+    return { dismissals: [], dailyCounts: {}, totalCount: 0 };
+  }
+}
+
+// Write dismissal log
+function writeDismissalLog(data) {
+  try {
+    fs.writeFileSync(DISMISSAL_LOG_FILE, JSON.stringify(data, null, 2));
+  } catch (e) {
+    console.error('Error writing dismissal log:', e);
+  }
+}
+
+// Log a dismissal event
+function logDismissal(site, instancesWaiting, dismissType) {
+  const log = readDismissalLog();
+  const now = new Date();
+  const dateStr = now.toISOString().split('T')[0];
+  const dayOfWeek = now.toLocaleDateString('en-US', { weekday: 'long' });
+  const hour = now.getHours();
+
+  const entry = {
+    timestamp: now.toISOString(),
+    date: dateStr,
+    dayOfWeek: dayOfWeek,
+    hour: hour,
+    site: site,
+    instancesWaiting: instancesWaiting,
+    dismissType: dismissType
+  };
+
+  log.dismissals.push(entry);
+  log.dailyCounts[dateStr] = (log.dailyCounts[dateStr] || 0) + 1;
+  log.totalCount++;
+
+  writeDismissalLog(log);
+  return entry;
+}
+
+// POST /api/dismiss-log - Log a dismissal event
+app.post('/api/dismiss-log', (req, res) => {
+  const { site, instancesWaiting = 0, dismissType = 'overlay_x_button' } = req.body;
+
+  if (!site) {
+    return res.status(400).json({ error: 'site is required' });
+  }
+
+  const entry = logDismissal(site, instancesWaiting, dismissType);
+  console.log(`[${new Date().toISOString()}] Dismissal logged: ${site} (${dismissType})`);
+
+  res.json({ success: true, entry });
+});
+
+// GET /api/dismiss-stats - Get dismissal statistics
+app.get('/api/dismiss-stats', (req, res) => {
+  const log = readDismissalLog();
+
+  // Calculate additional stats
+  const hourlyBreakdown = {};
+  const siteBreakdown = {};
+  const dayBreakdown = {};
+
+  for (const entry of log.dismissals) {
+    hourlyBreakdown[entry.hour] = (hourlyBreakdown[entry.hour] || 0) + 1;
+    siteBreakdown[entry.site] = (siteBreakdown[entry.site] || 0) + 1;
+    dayBreakdown[entry.dayOfWeek] = (dayBreakdown[entry.dayOfWeek] || 0) + 1;
+  }
+
+  res.json({
+    totalCount: log.totalCount,
+    dailyCounts: log.dailyCounts,
+    hourlyBreakdown,
+    siteBreakdown,
+    dayBreakdown,
+    recentDismissals: log.dismissals.slice(-10).reverse()
+  });
+});
+
+// DELETE /api/dismiss-stats - Clear dismissal history
+app.delete('/api/dismiss-stats', (req, res) => {
+  const initialData = {
+    dismissals: [],
+    dailyCounts: {},
+    totalCount: 0
+  };
+  writeDismissalLog(initialData);
+  console.log(`[${new Date().toISOString()}] Dismissal history cleared`);
+
+  res.json({ success: true, message: 'Dismissal history cleared' });
+});
+
+// Initialize dismissal log on startup
+initDismissalLog();
+
 // Start server
 app.listen(PORT, () => {
   console.log(`
@@ -186,6 +305,10 @@ app.listen(PORT, () => {
   │    POST /api/unregister    - Remove instance    │
   │         body: { instanceId }                    │
   │    DELETE /api/instance/:id - Remove instance   │
+  │    POST /api/dismiss-log   - Log dismissal      │
+  │         body: { site, instancesWaiting, type }  │
+  │    GET  /api/dismiss-stats - Get dismiss stats  │
+  │    DELETE /api/dismiss-stats - Clear history    │
   │    GET  /health            - Health check       │
   │                                                 │
   │  Timeout: ${TIMEOUT_MS / 1000} seconds                          │

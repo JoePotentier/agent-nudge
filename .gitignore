@@ -19,3 +19,6 @@ node_modules/
 # Server runtime files
 *.log
 *.pid
+
+# Server data files
+server/dismissals.json

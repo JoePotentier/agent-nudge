@@ -25,6 +25,40 @@
   pointer-events: auto;
 }
 
+/* Overlay close button */
+.refocus-overlay-close {
+  position: absolute;
+  top: 30px;
+  right: 30px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s ease, transform 0.2s ease;
+  z-index: 1;
+}
+
+.refocus-overlay-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.refocus-overlay-close:active {
+  transform: scale(0.95);
+}
+
+.refocus-overlay-close svg {
+  width: 24px;
+  height: 24px;
+  color: white;
+}
+
 .refocus-content {
   text-align: center;
   color: white;
@@ -267,5 +301,17 @@
 
   .refocus-notification-subtitle {
     font-size: 11px;
+  }
+
+  .refocus-overlay-close {
+    top: 15px;
+    right: 15px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .refocus-overlay-close svg {
+    width: 20px;
+    height: 20px;
   }
 }

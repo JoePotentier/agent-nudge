@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const serverStatus = document.getElementById('server-status');
   const clearDismissBtn = document.getElementById('clear-dismiss');
   const autoDismissInput = document.getElementById('auto-dismiss');
+  const allowOverlayDismissToggle = document.getElementById('allow-overlay-dismiss');
+  const soundEnabledToggle = document.getElementById('sound-enabled');
   const serverPortInput = document.getElementById('server-port');
   const sitesList = document.getElementById('sites-list');
   const newSiteInput = document.getElementById('new-site-input');
@@ -35,6 +37,16 @@ document.addEventListener('DOMContentLoaded', () => {
       // Update auto-dismiss input
       if (response.autoDismissSeconds !== undefined) {
         autoDismissInput.value = response.autoDismissSeconds;
+      }
+
+      // Update allow overlay dismiss toggle
+      if (response.allowOverlayDismiss !== undefined) {
+        allowOverlayDismissToggle.checked = response.allowOverlayDismiss;
+      }
+
+      // Update sound enabled toggle
+      if (response.soundEnabled !== undefined) {
+        soundEnabledToggle.checked = response.soundEnabled;
       }
 
       // Update server port input
@@ -207,6 +219,22 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.runtime.sendMessage({
       type: 'SET_AUTO_DISMISS_SECONDS',
       seconds: seconds
+    });
+  });
+
+  // Allow overlay dismiss toggle
+  allowOverlayDismissToggle.addEventListener('change', () => {
+    chrome.runtime.sendMessage({
+      type: 'SET_ALLOW_OVERLAY_DISMISS',
+      allow: allowOverlayDismissToggle.checked
+    });
+  });
+
+  // Sound enabled toggle
+  soundEnabledToggle.addEventListener('change', () => {
+    chrome.runtime.sendMessage({
+      type: 'SET_SOUND_ENABLED',
+      enabled: soundEnabledToggle.checked
     });
   });
 
