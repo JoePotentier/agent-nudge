@@ -321,6 +321,10 @@
     if (message.type === 'STATUS_UPDATE') {
       if (message.autoDismissSeconds !== undefined) {
         autoDismissSeconds = message.autoDismissSeconds;
+        // Clear any existing timer if auto-dismiss is disabled
+        if (autoDismissSeconds <= 0) {
+          clearAutoDismissTimer();
+        }
       }
       if (message.allowOverlayDismiss !== undefined) {
         allowOverlayDismiss = message.allowOverlayDismiss;
